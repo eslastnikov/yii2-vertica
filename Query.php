@@ -132,7 +132,12 @@ class Query extends Component implements QueryInterface
         if ($db === null) {
             $db = Yii::$app->get('vertica');
         }
-        return $db->createCommand(['sql' => $db->getQueryBuilder()->build($this)]);
+
+        list ($sql, $params) = $db->getQueryBuilder()->build($this);
+
+        return $db->createCommand(['sql' => $sql]);
+
+//        return $db->createCommand(['sql' => $db->getQueryBuilder()->build($this)]);
     }
 
     /**

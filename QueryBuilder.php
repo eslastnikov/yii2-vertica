@@ -63,7 +63,54 @@ class QueryBuilder extends \yii\db\QueryBuilder
         foreach ($params as $key => $value) {
             $sql = str_replace($key, self::preparationValue($value), $sql);
         }
-        return $sql;
+        return [$sql, $params];
+    }
+
+
+
+    /**
+     * @param array $tables
+     * @param array $params the binding parameters to be populated
+     * @return string the FROM clause built from [[Query::$from]].
+     */
+    public function buildFrom($tables, &$params)
+    {
+        if (empty($tables)) {
+            return '';
+        }
+
+        $tables = $this->quoteTableNames($tables, $params);
+
+        return 'FROM ' . implode(', ', $tables);
+    }
+
+    /**
+     * Quotes table names passed
+     *
+     * @param array $tables
+     * @param array $params
+     * @return array
+     */
+    private function quoteTableNames($tables, &$params)
+    {
+        foreach ($tables as $i => $table) {
+            if ($table instanceof Query) {
+                list($sql, $params) = $this->build($table, $params);
+                $tables[$i] = "($sql) " . $this->db->quoteTableName($i);
+            } elseif (is_string($i)) {
+                if (strpos($table, '(') === false) {
+                    $table = $this->db->quoteTableName($table);
+                }
+                $tables[$i] = "$table " . $this->db->quoteTableName($i);
+            } elseif (strpos($table, '(') === false) {
+                if (preg_match('/^(.*?)(?i:\s+as|)\s+([^ ]+)$/', $table, $matches)) { // with alias
+                    $tables[$i] = $this->db->quoteTableName($matches[1]) . ' ' . $this->db->quoteTableName($matches[2]);
+                } else {
+                    $tables[$i] = $this->db->quoteTableName($table);
+                }
+            }
+        }
+        return $tables;
     }
 
     /**

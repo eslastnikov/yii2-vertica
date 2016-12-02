@@ -22,7 +22,7 @@ class ActiveRecord extends BaseActiveRecord
     }
 
     /**
-     * @return \yii\verticaActiveQuery
+     * @return \yii\vertica\ActiveQuery
      */
     public static function find()
     {
