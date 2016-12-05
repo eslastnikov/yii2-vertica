@@ -88,11 +88,6 @@ class ActiveRecord extends BaseActiveRecord
     {
         return self::getDb()->createCommand()->getColumn();
     }
-    
-    public function safeAttributes()
-    {
-        return self::getDb()->createCommand()->getColumn();
-    }
 
     public static function populateRecord($record, $row)
     {
