@@ -28,7 +28,7 @@ class ActiveRecord extends BaseActiveRecord
     {
         $called = get_called_class();
         $query = Yii::createObject(ActiveQuery::className(), [$called]);
-        $query->from = $called::tableName();
+//        $query->from = $called::tableName();
         return $query;
     }
 

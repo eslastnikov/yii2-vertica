@@ -39,11 +39,11 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $query = $query->prepare($this);
 
         $params = empty($params) ? $query->params : array_merge($params, $query->params);
-        
+
         if (is_string($query->from)) {
             $query->from = [$query->from];
         }
-        
+
         $clauses = [
             $this->buildSelect($query->select, $params, $query->distinct, $query->selectOption),
             $this->buildFrom($query->from, $params),
@@ -61,8 +61,9 @@ class QueryBuilder extends \yii\db\QueryBuilder
             $sql = "($sql){$this->separator}$union";
         }
         foreach ($params as $key => $value) {
-            $sql = str_replace($key, self::preparationValue($value), $sql);
+            $params[$key] = self::preparationValue($value);
         }
+        $sql = strtr($sql, $params);
         return [$sql, $params];
     }
 
