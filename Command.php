@@ -27,14 +27,22 @@ class Command extends Component
     
     private $_sql;
 
-    public function __construct($config = []) 
+    /**
+     * Returns the SQL statement for this command.
+     * @return string the SQL statement to be executed
+     */
+    public function getSql()
     {
-        if (isset($config['sql'])) {
-            $this->_sql = $config['sql'];
+        return $this->_sql;
+    }
+
+    public function setSql($sql)
+    {
+        if ($sql !== $this->_sql) {
+            $this->_sql = $this->db->quoteSql($sql);
         }
-        if (isset($config['db'])) {
-            $this->db = $config['db'];
-        }
+
+        return $this;
     }
 
     /**

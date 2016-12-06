@@ -28,6 +28,13 @@ class Connection extends Component
     public static $db;
 
     /**
+     * @var string the common prefix or suffix for table names. If a table name is given
+     * as `{{%TableName}}`, then the percentage character `%` will be replaced with this
+     * property value. For example, `{{%post}}` becomes `{{tbl_post}}`.
+     */
+    public $tablePrefix = '';
+
+    /**
      * @var string dsn connect data
      */
     public $dsn;
@@ -71,10 +78,12 @@ class Connection extends Component
     {
         return $this->_table;
     }
-    
+
     /**
      * @param type $sql
-     * @return \yii\vertica\Connection
+     *
+     * @return Connection
+     * @throws \Exception
      */
     public function exec($sql)
     {
@@ -179,20 +188,22 @@ class Connection extends Component
         }
         try {   
             $this->activeConnect = odbc_connect($this->dsn, $this->username, $this->password);
-        } catch (yii\base\ErrorException $ex) {
+        } catch (\yii\base\ErrorException $ex) {
             throw new InvalidConfigException($ex->getMessage());
         }
         Yii::trace('Opening connection to vertica.', __CLASS__);
         $this->initConnection();
     }
-    
+
     /**
      * Return is connect to params
+     *
      * @param type $dsn
      * @param type $username
      * @param type $password
-     * @param type $error
-     * @return boolean
+     * @param bool|type $error
+     *
+     * @return bool
      */
     public function isConnect($dsn, $username, $password, $error = false)
     {
@@ -237,16 +248,44 @@ class Connection extends Component
     }
 
     /**
-     * Creates a command for execution.
-     * @param array $config the configuration for the Command class
-     * @return Command the DB command
+     * Processes a SQL statement by quoting table and column names that are enclosed within double brackets.
+     * Tokens enclosed within double curly brackets are treated as table names, while
+     * tokens enclosed within double square brackets are column names. They will be quoted accordingly.
+     * Also, the percentage character "%" at the beginning or ending of a table name will be replaced
+     * with [[tablePrefix]].
+     * @param string $sql the SQL to be quoted
+     * @return string the quoted SQL
      */
-    public function createCommand($config = [])
+    public function quoteSql($sql)
+    {
+        return preg_replace_callback(
+            '/(\\{\\{(%?[\w\-\. ]+%?)\\}\\}|\\[\\[([\w\-\. ]+)\\]\\])/',
+            function ($matches) {
+                if (isset($matches[3])) {
+                    return $this->quoteColumnName($matches[3]);
+                } else {
+                    return str_replace('%', $this->tablePrefix, $this->quoteTableName($matches[2]));
+                }
+            },
+            $sql
+        );
+    }
+
+    /**
+     * Creates a command for execution.
+     *
+     * @param null $sql
+     *
+     * @return Command the DB command
+     * @internal param array $config the configuration for the Command class
+     */
+    public function createCommand($sql = null)
     {
         if (empty($config['db'])) {
             $this->open();
             $config['db'] = $this;
         }
+        $config['sql'] = $sql;
         $command = new Command($config);
 
         return $command;
@@ -265,9 +304,22 @@ class Connection extends Component
     {
         return $name;
     }
-    
+
     public function quoteTableName($name)
     {
-        return $name;
+        if (strpos($name, '(') !== false || strpos($name, '{{') !== false) {
+            return $name;
+        }
+        if (strpos($name, '.') === false) {
+            return $name;
+        }
+        $parts = explode('.', $name);
+        foreach ($parts as $i => $part) {
+            $parts[$i] = $part;
+        }
+
+        return implode('.', $parts);
+
+//        return $name;
     }
 }

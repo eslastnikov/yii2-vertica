@@ -135,7 +135,7 @@ class Query extends Component implements QueryInterface
 
         list ($sql, $params) = $db->getQueryBuilder()->build($this);
 
-        return $db->createCommand(['sql' => $sql]);
+        return $db->createCommand($sql);
 
 //        return $db->createCommand(['sql' => $db->getQueryBuilder()->build($this)]);
     }
