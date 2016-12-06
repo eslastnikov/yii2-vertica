@@ -78,9 +78,31 @@ class Connection extends Component
      */
     public function exec($sql)
     {
-        $this->open();
-        $this->_resource = odbc_exec($this->activeConnect, $sql);
+
+        Yii::info($sql, 'yii\db\Command::query');
+
+        Yii::beginProfile($sql, 'yii\db\Command::query');
+        try {
+            $this->open();
+            $this->_resource = odbc_exec($this->activeConnect, $sql);
+            Yii::endProfile($sql, 'yii\db\Command::query');
+        } catch (\Exception $e) {
+            Yii::endProfile($sql, 'yii\db\Command::query');
+            throw $this->convertException($e, $sql);
+        }
         return $this;
+    }
+
+    public function convertException(\Exception $e, $rawSql)
+    {
+        if ($e instanceof \Exception) {
+            return $e;
+        }
+
+        $exceptionClass = '\yii\db\Exception';
+        $message = $e->getMessage()  . "\nThe SQL being executed was: $rawSql";
+        $errorInfo = null;
+        return new $exceptionClass($message, $errorInfo, (int) $e->getCode(), $e);
     }
     
     /**
