@@ -179,29 +179,33 @@ class Connection extends Component
     /**
      * Establishes a DB connection.
      * It does nothing if a DB connection has already been established.
-     * @throws Exception if connection fails
+     * @throws \Exception if connection fails
      */
     public function open()
     {
         if ($this->activeConnect !== null) {
             return;
         }
-        try {   
+        $token = 'Opening DB connection: ' . $this->dsn;
+        try {
+            Yii::info($token, __METHOD__);
+            Yii::beginProfile($token, __METHOD__);
             $this->activeConnect = odbc_connect($this->dsn, $this->username, $this->password);
+            $this->initConnection();
+            Yii::endProfile($token, __METHOD__);
         } catch (\yii\base\ErrorException $ex) {
+            Yii::endProfile($token, __METHOD__);
             throw new InvalidConfigException($ex->getMessage());
         }
-        Yii::trace('Opening connection to vertica.', __CLASS__);
-        $this->initConnection();
     }
 
     /**
      * Return is connect to params
      *
-     * @param type $dsn
-     * @param type $username
-     * @param type $password
-     * @param bool|type $error
+     * @param string $dsn
+     * @param string $username
+     * @param string $password
+     * @param bool $error
      *
      * @return bool
      */
