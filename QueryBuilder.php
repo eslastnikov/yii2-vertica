@@ -9,6 +9,7 @@ namespace yii\vertica;
 
 use yii\db\Exception;
 use yii\base\InvalidParamException;
+use yii\db\Expression;
 
 /**
  * QueryBuilder is the query builder for MySQL databases.
@@ -67,7 +68,153 @@ class QueryBuilder extends \yii\db\QueryBuilder
         return [$sql, $params];
     }
 
+    /**
+     * Creates a condition based on column-value pairs.
+     * @param array $condition the condition specification.
+     * @param array $params the binding parameters to be populated
+     * @return string the generated SQL expression
+     */
+    public function buildHashCondition($condition, &$params)
+    {
+        $parts = [];
+        foreach ($condition as $column => $value) {
+            if (is_array($value) || $value instanceof Query) {
+                // IN condition
+                $parts[] = $this->buildInCondition('IN', [$column, $value], $params);
+            } else {
+                if (strpos($column, '(') === false) {
+                    $column = $this->db->quoteColumnName($column);
+                }
+                if ($value === null) {
+                    $parts[] = "$column IS NULL";
+                } elseif ($value instanceof Expression) {
+                    $parts[] = "$column=" . $value->expression;
+                    foreach ($value->params as $n => $v) {
+                        $params[$n] = $v;
+                    }
+                } else {
+                    $phName = self::PARAM_PREFIX . count($params);
+                    $parts[] = "$column=$phName";
+                    $params[$phName] = $value;
+                }
+            }
+        }
+        return count($parts) === 1 ? $parts[0] : '(' . implode(') AND (', $parts) . ')';
+    }
 
+
+
+    /**
+     * Creates an SQL expressions with the `IN` operator.
+     * @param string $operator the operator to use (e.g. `IN` or `NOT IN`)
+     * @param array $operands the first operand is the column name. If it is an array
+     * a composite IN condition will be generated.
+     * The second operand is an array of values that column value should be among.
+     * If it is an empty array the generated expression will be a `false` value if
+     * operator is `IN` and empty if operator is `NOT IN`.
+     * @param array $params the binding parameters to be populated
+     * @return string the generated SQL expression
+     * @throws Exception if wrong number of operands have been given.
+     */
+    public function buildInCondition($operator, $operands, &$params)
+    {
+        if (!isset($operands[0], $operands[1])) {
+            throw new Exception("Operator '$operator' requires two operands.");
+        }
+
+        list($column, $values) = $operands;
+
+        if ($values === [] || $column === []) {
+            return $operator === 'IN' ? '0=1' : '';
+        }
+
+        if ($values instanceof Query) {
+            return $this->buildSubqueryInCondition($operator, $column, $values, $params);
+        }
+
+        $values = (array) $values;
+
+        if (count($column) > 1) {
+            return $this->buildCompositeInCondition($operator, $column, $values, $params);
+        }
+
+        if (is_array($column)) {
+            $column = reset($column);
+        }
+        foreach ($values as $i => $value) {
+            if (is_array($value)) {
+                $value = isset($value[$column]) ? $value[$column] : null;
+            }
+            if ($value === null) {
+                $values[$i] = 'NULL';
+            } elseif ($value instanceof Expression) {
+                $values[$i] = $value->expression;
+                foreach ($value->params as $n => $v) {
+                    $params[$n] = $v;
+                }
+            } else {
+                $phName = self::PARAM_PREFIX . count($params);
+                $params[$phName] = $value;
+                $values[$i] = $phName;
+            }
+        }
+        if (strpos($column, '(') === false) {
+            $column = $this->db->quoteColumnName($column);
+        }
+
+        if (count($values) > 1) {
+            return "$column $operator (" . implode(', ', $values) . ')';
+        } else {
+            $operator = $operator === 'IN' ? '=' : '<>';
+            return $column . $operator . reset($values);
+        }
+    }
+
+    /**
+     * @param array $columns
+     * @param array $params the binding parameters to be populated
+     * @param boolean $distinct
+     * @param string $selectOption
+     * @return string the SELECT clause built from [[Query::$select]].
+     */
+    public function buildSelect($columns, &$params, $distinct = false, $selectOption = null)
+    {
+        $select = $distinct ? 'SELECT DISTINCT' : 'SELECT';
+        if ($selectOption !== null) {
+            $select .= ' ' . $selectOption;
+        }
+
+        if (empty($columns)) {
+            return $select . ' *';
+        }
+
+        foreach ($columns as $i => $column) {
+            if ($column instanceof Expression) {
+                if (is_int($i)) {
+                    $columns[$i] = $column->expression;
+                } else {
+                    $columns[$i] = $column->expression . ' AS ' . $this->db->quoteColumnName($i);
+                }
+                $params = array_merge($params, $column->params);
+            } elseif ($column instanceof Query) {
+                list($sql, $params) = $this->build($column, $params);
+                $columns[$i] = "($sql) AS " . $this->db->quoteColumnName($i);
+            } elseif (is_string($i)) {
+                if (strpos($column, '(') === false) {
+                    $column = $this->db->quoteColumnName($column);
+                }
+                $columns[$i] = "$column AS " . $this->db->quoteColumnName($i);
+            } elseif (strpos($column, '(') === false) {
+                if (preg_match('/^(.*?)(?i:\s+as\s+|\s+)([\w\-_\.]+)$/', $column, $matches)) {
+                    $columns[$i] = $this->db->quoteColumnName($matches[1]) . ' AS ' . $this->db->quoteColumnName($matches[2]);
+                } else {
+                    $columns[$i] = $this->db->quoteColumnName($column);
+                }
+            }
+        }
+
+        return $select . ' ' . implode(', ', $columns);
+    }
 
     /**
      * @param array $tables
@@ -83,6 +230,40 @@ class QueryBuilder extends \yii\db\QueryBuilder
         $tables = $this->quoteTableNames($tables, $params);
 
         return 'FROM ' . implode(', ', $tables);
+    }
+
+
+
+    /**
+     * @param array $joins
+     * @param array $params the binding parameters to be populated
+     * @return string the JOIN clause built from [[Query::$join]].
+     * @throws Exception if the $joins parameter is not in proper format
+     */
+    public function buildJoin($joins, &$params)
+    {
+        if (empty($joins)) {
+            return '';
+        }
+
+        foreach ($joins as $i => $join) {
+            if (!is_array($join) || !isset($join[0], $join[1])) {
+                throw new Exception('A join clause must be specified as an array of join type, join table, and optionally join condition.');
+            }
+            // 0:join type, 1:join table, 2:on-condition (optional)
+            list ($joinType, $table) = $join;
+            $tables = $this->quoteTableNames((array) $table, $params);
+            $table = reset($tables);
+            $joins[$i] = "$joinType $table";
+            if (isset($join[2])) {
+                $condition = $this->buildCondition($join[2], $params);
+                if ($condition !== '') {
+                    $joins[$i] .= ' ON ' . $condition;
+                }
+            }
+        }
+
+        return implode($this->separator, $joins);
     }
 
     /**
