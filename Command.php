@@ -122,10 +122,10 @@ class Command extends Component
     }
     
     /**
-     * @param type $table
-     * @param type $pkName
-     * @param type $pkValue
-     * @param type $attributes
+     * @param string $table
+     * @param string $pkName
+     * @param string $pkValue
+     * @param array $attributes
      * @return boolean
      */
     public function update($table, $pkName, $pkValue, $attributes)
@@ -138,7 +138,7 @@ class Command extends Component
             $value = QueryBuilder::preparationValue($value);
             $set[] = "$key=$value";
         }
-        $this->_sql = "UPDATE $table SET " . implode(', ', $set) . " WHERE $pkName=$pkValue";
+        $this->_sql = "UPDATE $table SET " . implode(', ', $set) . " WHERE $pkName=" . QueryBuilder::preparationValue($pkValue);
         $this->db->execute($this->_sql);
         return true;
     }
@@ -228,4 +228,8 @@ class Command extends Component
         $this->db->execute($this->_sql);
     }
 
+    public function query()
+    {
+        return $this->_sql;
+    }
 }
