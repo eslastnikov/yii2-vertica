@@ -26,7 +26,7 @@ class QueryBuilder extends \yii\db\QueryBuilder
     public static function preparationValue($value)
     {
         if (is_numeric($value)) {
-            $value = (int)$value;
+            $value = $value + 0;
         } elseif (is_array($value)) {
             $value = implode(',', $value);
         } else {
