@@ -108,7 +108,7 @@ class Command extends Component
     /**
      * @param string $table
      * @param array $columns
-     * @return \yii\vertica\Command
+     * @return boolean
      */
     public function insert($table, $columns)
     {
@@ -118,7 +118,8 @@ class Command extends Component
             $values[] = QueryBuilder::preparationValue($value);
         }
         $this->_sql .= ' VALUES (' . implode(', ', $values) . ')';
-        return $this;
+        $this->db->execute($this->_sql);
+        return true;
     }
     
     /**
