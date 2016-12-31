@@ -18,7 +18,7 @@ class Connection extends Component
     const EVENT_AFTER_OPEN = 'afterOpen';
 
     /**
-     * @var array the active connect.
+     * @var resource the active connect.
      */
     public $activeConnect;
     
@@ -113,16 +113,30 @@ class Connection extends Component
         $errorInfo = null;
         return new $exceptionClass($message, $errorInfo, (int) $e->getCode(), $e);
     }
-    
+
     /**
      * @param string $sql query execute
      * @param array $params not worked
-     * @return boolean
+     *
+     * @return bool
+     * @throws \Exception
      */
     public function execute($sql, $params = [])
     {
-        $stmt = odbc_prepare($this->activeConnect, $sql);
-        odbc_execute($stmt, $params);
+        Yii::info($sql, 'yii\db\Command::query');
+
+        Yii::beginProfile($sql, 'yii\db\Command::query');
+        try {
+            $stmt = odbc_prepare($this->activeConnect, $sql);
+            odbc_execute($stmt, $params);
+            Yii::endProfile($sql, 'yii\db\Command::query');
+        } catch (\Exception $e) {
+            Yii::endProfile($sql, 'yii\db\Command::query');
+            preg_match('%NOTICE 4185%i', $e->getMessage(), $matches);
+            if (empty($matches)) {
+                throw $this->convertException($e, $sql);
+            }
+        }
         return true;
     }
 

@@ -10,6 +10,7 @@ namespace yii\vertica;
 use Yii;
 use yii\base\Component;
 use yii\base\NotSupportedException;
+use yii\db\Expression;
 use yii\db\QueryInterface;
 use yii\db\QueryTrait;
 
