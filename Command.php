@@ -233,4 +233,10 @@ class Command extends Component
     {
         return $this->_sql;
     }
+
+    public function getDataReader()
+    {
+        $this->db->exec($this->_sql);
+        return new DataReader($this);
+    }
 }
