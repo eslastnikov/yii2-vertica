@@ -320,7 +320,22 @@ class Connection extends Component
     
     public function quoteColumnName($name)
     {
-        return $name;
+        if (strpos($name, '(') !== false || strpos($name, '[[') !== false || strpos($name, '{{') !== false) {
+            return $name;
+        }
+        if (($pos = strrpos($name, '.')) !== false) {
+            $prefix = $this->quoteTableName(substr($name, 0, $pos)) . '.';
+            $name = substr($name, $pos + 1);
+        } else {
+            $prefix = '';
+        }
+
+        return $prefix . $this->quoteSimpleColumnName($name);
+    }
+
+    public function quoteSimpleColumnName($name)
+    {
+        return strpos($name, '"') !== false || $name === '*' ? $name : '"' . $name . '"';
     }
 
     public function quoteTableName($name)
@@ -329,15 +344,13 @@ class Connection extends Component
             return $name;
         }
         if (strpos($name, '.') === false) {
-            return $name;
+            return '"' . $name . '"';
         }
         $parts = explode('.', $name);
         foreach ($parts as $i => $part) {
-            $parts[$i] = $part;
+            $parts[$i] = strpos($part, '"') !== false ? $part : '"' . $part . '"';
         }
 
         return implode('.', $parts);
-
-//        return $name;
     }
 }
