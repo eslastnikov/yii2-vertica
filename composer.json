@@ -1,19 +1,24 @@
 {
-    "name": "forgeads/yii2-vertica",
+    "name": "eslastnikov/yii2-vertica",
     "description": "Vertica integration and ActiveRecord for the Yii framework fork https://github.com/keygenqt/yii2-vertica",
     "keywords": ["yii2", "vertica", "active-record", "search", "fulltext"],
     "type": "yii2-extension",
     "license": "GPL-3.0",
     "version":"0.5.0",
     "support": {
-        "email": "alexey.shapilov@gmail.com",
-        "wiki": "https://github.com/alexey-shapilov/yii2-vertica/wiki",
-        "source": "https://github.com/alexey-shapilov/yii2-vertica"
+        "email": "e.slastnikov@gmail.com",
+        "wiki": "https://github.com/eslastnikov/yii2-vertica/wiki",
+        "source": "https://github.com/eslastnikov/yii2-vertica"
     },
     "authors": [
         {
             "name": "Alexey Shapilov",
             "email": "alexey.shapilov@gmail.com",
+            "role": "Developer"
+        },
+        {
+            "name": "Evgeny Slastnikov",
+            "email": "e.slastnikov@gmail.com",
             "role": "Developer"
         }
     ],
