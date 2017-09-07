@@ -267,6 +267,31 @@ class QueryBuilder extends \yii\db\QueryBuilder
     }
 
     /**
+     * @param array $unions
+     * @param array $params the binding parameters to be populated
+     * @return string the UNION clause built from [[Query::$union]].
+     */
+    public function buildUnion($unions, &$params)
+    {
+        if (empty($unions)) {
+            return '';
+        }
+
+        $result = '';
+
+        foreach ($unions as $i => $union) {
+            $query = $union['query'];
+            if ($query instanceof Query) {
+                list($unions[$i]['query'], $params) = $this->build($query, $params);
+            }
+
+            $result .= 'UNION ' . ($union['all'] ? 'ALL ' : '') . '( ' . $unions[$i]['query'] . ' ) ';
+        }
+
+        return trim($result);
+    }
+
+    /**
      * Quotes table names passed
      *
      * @param array $tables
