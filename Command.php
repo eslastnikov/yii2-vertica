@@ -205,6 +205,7 @@ class Command extends Component
      */
     public function queryOne()
     {
+        \Yii::trace('SQL Query to execute: '. $this->_sql, 'vertica\\Command');
         return $this->db->exec($this->_sql)->one();
     }
 
@@ -213,6 +214,7 @@ class Command extends Component
      */
     public function queryAll()
     {
+        \Yii::trace('SQL Query to execute: '. $this->_sql, 'vertica\\Command');
         return $this->db->exec($this->_sql)->all();
     }
     
@@ -221,11 +223,13 @@ class Command extends Component
      */
     public function queryScalar()
     {
+        \Yii::trace('SQL Query to execute: '. $this->_sql, 'vertica\\Command');
         return $this->db->exec($this->_sql)->scalar();
     }
 
     public function execute($params = [])
     {
+        \Yii::trace('SQL Query to execute: '. $this->_sql, 'vertica\\Command');
         $this->db->execute($this->_sql);
     }
 
